@@ -1,0 +1,8 @@
+{
+  "name": "RedactZero",
+  "description": "Local Document Privacy & Blackout Tool. 100% client-side redaction with blur, mosaic, and black box styles. Flattened PDF export, bulk processing, and precision magnification lens.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -4,17 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RedactZero — Local Document Privacy & Blackout Tool</title>
+    <meta name="description" content="Local Document Privacy & Blackout Tool. 100% client-side redaction with blur, mosaic, and black box styles. Flattened PDF export, bulk processing, and precision magnification lens.">
+    <meta property="og:title" content="RedactZero — Local Document Privacy & Blackout Tool">
+    <meta property="og:description" content="Local Document Privacy & Blackout Tool. 100% client-side redaction with blur, mosaic, and black box styles. Flattened PDF export, bulk processing, and precision magnification lens.">
+    
+    <!-- Client-side PDF and ZIP libraries -->
+    <script src="/vendor/jspdf.min.js"></script>
+    <script src="/vendor/jszip.min.js"></script>
+
     <style>
         :root {
             --bg-primary: #090a0f;
             --bg-secondary: #13151f;
             --bg-tertiary: #1c2030;
+            --bg-elevated: #242a40;
             --accent: #7c3aed;
             --accent-hover: #6d28d9;
+            --accent-glow: rgba(124, 58, 237, 0.25);
             --text-main: #f3f4f6;
             --text-muted: #9ca3af;
+            --text-dim: #6b7280;
             --border: #2d3748;
+            --border-focus: #4b5563;
             --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
         }
 
         * {
@@ -35,12 +49,15 @@
         header {
             background-color: var(--bg-secondary);
             border-bottom: 1px solid var(--border);
-            padding: 1rem 2rem;
+            padding: 0.75rem 1.5rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
             gap: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 50;
         }
 
         .logo-area {
@@ -50,7 +67,7 @@
         }
 
         .logo-icon {
-            background: var(--accent);
+            background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
             color: white;
             width: 36px;
             height: 36px;
@@ -58,24 +75,36 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: bold;
+            font-size: 1.1rem;
+            box-shadow: 0 2px 10px var(--accent-glow);
         }
 
         h1 {
             font-size: 1.25rem;
-            font-weight: 600;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
         }
 
         .badges {
             display: flex;
-            gap: 0.75rem;
+            gap: 0.5rem;
             flex-wrap: wrap;
         }
 
         .badge {
             background: var(--bg-tertiary);
             border: 1px solid var(--border);
-            padding: 0.35rem 0.75rem;
+            padding: 0.25rem 0.6rem;
             border-radius: 999px;
             font-size: 0.75rem;
             color: var(--text-muted);
@@ -87,39 +116,71 @@
         .badge.active {
             color: var(--success);
             border-color: rgba(16, 185, 129, 0.3);
+            background: rgba(16, 185, 129, 0.08);
         }
 
         .donate-btn {
-            background: var(--bg-tertiary);
-            color: var(--text-main);
-            border: 1px solid var(--border);
+            background: linear-gradient(135deg, #00d632 0%, #00a827 100%);
+            color: #000;
+            border: none;
             padding: 0.4rem 0.85rem;
             border-radius: 6px;
             text-decoration: none;
-            font-size: 0.85rem;
-            font-weight: 500;
+            font-size: 0.82rem;
+            font-weight: 700;
             transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
         }
 
         .donate-btn:hover {
-            background: var(--accent);
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .icon-btn {
+            background: var(--bg-tertiary);
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            padding: 0.4rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            user-select: none;
+        }
+
+        .icon-btn:hover {
+            color: var(--text-main);
             border-color: var(--accent);
+            background: var(--bg-elevated);
+        }
+
+        .icon-btn.active {
+            background: rgba(124, 58, 237, 0.2);
+            border-color: var(--accent);
+            color: #c4b5fd;
         }
 
         main {
             flex: 1;
-            max-width: 1200px;
+            max-width: 1440px;
             width: 100%;
             margin: 0 auto;
-            padding: 2rem;
+            padding: 1.25rem 1.5rem;
             display: grid;
-            grid-template-columns: 350px 1fr;
-            gap: 2rem;
+            grid-template-columns: 360px 1fr;
+            gap: 1.5rem;
         }
 
-        @media (max-width: 900px) {
+        @media (max-width: 1024px) {
             main {
                 grid-template-columns: 1fr;
+                padding: 1rem;
             }
         }
 
@@ -127,32 +188,414 @@
             background-color: var(--bg-secondary);
             border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 1.5rem;
+            padding: 1.25rem;
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
+            gap: 1.25rem;
             height: fit-content;
         }
 
-        .panel h2 {
-            font-size: 1rem;
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            padding-bottom: 0.75rem;
+        }
+
+        .panel-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-label {
+            font-size: 0.8rem;
             font-weight: 600;
             color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        .form-group {
+        /* Style Selector Buttons */
+        .style-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+        }
+
+        .style-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem 0.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            color: var(--text-muted);
+            user-select: none;
+        }
+
+        .style-card:hover {
+            border-color: var(--border-focus);
+            background: var(--bg-elevated);
+            color: var(--text-main);
+        }
+
+        .style-card.active {
+            border-color: var(--accent);
+            background: rgba(124, 58, 237, 0.15);
+            color: var(--text-main);
+            box-shadow: 0 0 0 1px var(--accent);
+        }
+
+        .style-preview-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+
+        .preview-blackout {
+            background: #000;
+            border: 1px solid #333;
+            color: #fff;
+        }
+
+        .preview-blur {
+            background: radial-gradient(circle, #818cf8 10%, #312e81 80%);
+            color: #fff;
+        }
+
+        .preview-mosaic {
+            background-image: 
+                linear-gradient(45deg, #475569 25%, transparent 25%), 
+                linear-gradient(-45deg, #475569 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #475569 75%), 
+                linear-gradient(-45deg, transparent 75%, #475569 75%);
+            background-size: 8px 8px;
+            background-color: #1e293b;
+            border: 1px solid #334155;
+        }
+
+        .style-name {
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        .style-key {
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1px 4px;
+            border-radius: 3px;
+        }
+
+        /* Sliders and controls */
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .slider-value {
+            font-weight: 600;
+            color: var(--accent);
+            font-variant-numeric: tabular-nums;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--bg-tertiary);
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: 0 0 8px var(--accent-glow);
+            transition: transform 0.1s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+
+        input[type="range"]:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* History bar */
+        .history-bar {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+
+        /* Buttons */
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.65rem 1rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            text-decoration: none;
+            user-select: none;
+        }
+
+        .btn:hover:not(:disabled) {
+            background: var(--accent-hover);
+            box-shadow: 0 2px 8px var(--accent-glow);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            filter: grayscale(0.5);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--bg-elevated);
+            border-color: var(--border-focus);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.12);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.25);
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: rgba(239, 68, 68, 0.22);
+            border-color: #ef4444;
+        }
+
+        .btn-sm {
+            padding: 0.35rem 0.65rem;
+            font-size: 0.75rem;
+            border-radius: 6px;
+        }
+
+        /* Options toggle switch */
+        .option-item {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.65rem;
+            border-radius: 8px;
+            background: var(--bg-tertiary);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .option-item:hover {
+            background: var(--bg-elevated);
+        }
+
+        .option-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+        }
+
+        .option-title {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .option-desc {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            line-height: 1.3;
+        }
+
+        /* Custom toggle checkbox */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 20px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #374151;
+            transition: .2s;
+            border-radius: 20px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .2s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--accent);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(16px);
+        }
+
+        /* Export Format Selector */
+        .format-select-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.4rem;
+        }
+
+        .format-pill {
+            padding: 0.45rem 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg-tertiary);
+            color: var(--text-muted);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.2rem;
+        }
+
+        .format-pill:hover {
+            border-color: var(--border-focus);
+            color: var(--text-main);
+        }
+
+        .format-pill.active {
+            border-color: var(--accent);
+            background: rgba(124, 58, 237, 0.15);
+            color: var(--text-main);
+            box-shadow: 0 0 0 1px var(--accent);
+        }
+
+        .format-badge {
+            font-size: 0.65rem;
+            color: var(--text-dim);
+        }
+
+        /* Magnification Lens Controls */
+        .lens-control-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem;
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
         }
 
-        label {
-            font-size: 0.85rem;
-            font-weight: 500;
+        .lens-toggles {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            justify-content: space-between;
         }
 
+        .zoom-selector {
+            display: flex;
+            gap: 0.25rem;
+            background: var(--bg-secondary);
+            padding: 2px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+
+        .zoom-chip {
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .zoom-chip.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        /* Dropzone area */
         .dropzone {
             border: 2px dashed var(--border);
             border-radius: 12px;
@@ -165,53 +608,208 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 1rem;
-            min-height: 250px;
+            gap: 1.25rem;
+            min-height: 420px;
         }
 
         .dropzone:hover, .dropzone.dragover {
             border-color: var(--accent);
-            background: var(--bg-tertiary);
+            background: rgba(124, 58, 237, 0.05);
         }
 
-        .btn {
-            background: var(--accent);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 0.75rem 1.5rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-            display: inline-flex;
+        .dropzone-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.5rem;
-            text-decoration: none;
+            font-size: 2rem;
         }
 
-        .btn:hover {
-            background: var(--accent-hover);
+        .dropzone-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
-        .btn-secondary {
+        /* Editor Workspace */
+        .editor-workspace {
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+            width: 100%;
+        }
+
+        /* Bulk Queue Bar */
+        .bulk-queue-container {
             background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.6rem 0.85rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .bulk-queue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        .bulk-actions-row {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .queue-strip {
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            scrollbar-width: thin;
+        }
+
+        .queue-strip::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .queue-strip::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 2px;
+        }
+
+        .queue-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.35rem 0.55rem;
+            cursor: pointer;
+            transition: all 0.15s;
+            flex-shrink: 0;
+            max-width: 220px;
+        }
+
+        .queue-item:hover {
+            border-color: var(--border-focus);
+            background: var(--bg-elevated);
+        }
+
+        .queue-item.active {
+            border-color: var(--accent);
+            background: rgba(124, 58, 237, 0.18);
+        }
+
+        .queue-thumb {
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            background: #000;
+            object-fit: cover;
+            border: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .queue-meta {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .queue-name {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .queue-status {
+            font-size: 0.65rem;
+            color: var(--text-dim);
+        }
+
+        .queue-close {
+            color: var(--text-dim);
+            padding: 0 3px;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            margin-left: 0.25rem;
+            line-height: 1;
+        }
+
+        .queue-close:hover {
+            color: var(--danger);
+            background: rgba(239, 68, 68, 0.15);
+        }
+
+        .workspace-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            background: var(--bg-tertiary);
+            padding: 0.5rem 0.85rem;
+            border-radius: 8px;
             border: 1px solid var(--border);
         }
 
-        .btn-secondary:hover {
-            background: var(--border);
+        .file-meta-group {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            font-size: 0.8rem;
+        }
+
+        .file-name-tag {
+            font-weight: 600;
+            color: var(--text-main);
+            max-width: 260px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-dim-tag {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+
+        .canvas-viewport {
+            position: relative;
+            width: 100%;
+            min-height: 480px;
+            max-height: calc(100vh - 250px);
+            overflow: auto;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: #06070a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.25rem;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5);
         }
 
         .canvas-container {
             position: relative;
             display: inline-block;
-            max-width: 100%;
-            overflow: auto;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            background: #000;
-            text-align: center;
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.7);
+            border-radius: 4px;
+            overflow: hidden;
+            background: #fff;
         }
 
         canvas {
@@ -220,6 +818,232 @@
             max-width: 100%;
             height: auto;
         }
+
+        /* Magnification Lens Loupe (Precision Glass Reticle) */
+        .magnifier-loupe {
+            position: absolute;
+            display: none;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            border: 3px solid #7c3aed;
+            box-shadow: 0 0 0 2px #090a0f, 0 8px 24px rgba(0, 0, 0, 0.8), inset 0 0 10px rgba(0, 0, 0, 0.3);
+            pointer-events: none;
+            overflow: hidden;
+            background: #000;
+            z-index: 40;
+            transform: translate(-50%, -50%);
+        }
+
+        .magnifier-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* Crosshairs Reticle */
+        .magnifier-reticle-h {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: rgba(239, 68, 68, 0.7);
+            box-shadow: 0 0 2px #000;
+            pointer-events: none;
+        }
+
+        .magnifier-reticle-v {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: rgba(239, 68, 68, 0.7);
+            box-shadow: 0 0 2px #000;
+            pointer-events: none;
+        }
+
+        .magnifier-coord {
+            position: absolute;
+            bottom: 6px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.75);
+            color: #f3f4f6;
+            font-size: 0.65rem;
+            font-family: monospace;
+            padding: 1px 6px;
+            border-radius: 4px;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+
+        /* Docked Lens Mode */
+        .docked-lens {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            width: 160px;
+            height: 160px;
+            border-radius: 10px;
+            border: 2px solid var(--accent);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.8);
+            background: #090a0f;
+            display: none;
+            overflow: hidden;
+            z-index: 35;
+        }
+
+        /* HUD on canvas */
+        .hud-overlay {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            background: rgba(19, 21, 31, 0.88);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--border);
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            z-index: 30;
+        }
+
+        /* Modal */
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .modal-backdrop.open {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            width: 100%;
+            max-width: 460px;
+            padding: 1.5rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.25rem;
+            cursor: pointer;
+            padding: 0.2rem;
+            line-height: 1;
+        }
+
+        .close-btn:hover {
+            color: var(--text-main);
+        }
+
+        .shortcut-table {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .shortcut-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.82rem;
+            padding-bottom: 0.4rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .shortcut-desc {
+            color: var(--text-muted);
+        }
+
+        .kbd-key {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 2px 7px;
+            font-size: 0.75rem;
+            font-family: monospace;
+            color: var(--text-main);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Toast notifications */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            padding: 0.6rem 1.25rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: transform 0.25s ease-out, opacity 0.25s ease-out;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 200;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* Progress Modal */
+        .progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--accent);
+            width: 0%;
+            transition: width 0.2s;
+        }
     </style>
 </head>
 <body>
@@ -227,101 +1051,1460 @@
     <header>
         <div class="logo-area">
             <div class="logo-icon">🔒</div>
-            <h1>RedactZero <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">Local Document Privacy</span></h1>
+            <div>
+                <h1>RedactZero</h1>
+            </div>
         </div>
-        <div class="badges">
-            <div class="badge active">✓ 100% Client-Side</div>
-            <div class="badge active">✓ Zero Data Leaks</div>
-            <div class="badge active">✓ Offline Ready</div>
+
+        <div class="header-actions">
+            <div class="badges">
+                <div class="badge active" title="All processing happens right in your browser memory">✓ 100% Client-Side</div>
+                <div class="badge active" title="No network calls, zero tracking, images never leave device">✓ Zero Leaks</div>
+                <div class="badge active" title="Works completely offline without internet">✓ Offline Ready</div>
+            </div>
+
+            <button class="icon-btn" onclick="toggleShortcutsModal()" title="View keyboard shortcuts (or press ?)">
+                ⌨️ Shortcuts
+            </button>
+
+            <a href="https://cash.app/$static9072" target="_blank" rel="noopener noreferrer" class="donate-btn" title="Support RedactZero open source development">
+                <span>💚</span>
+                <span>Donate $static9072</span>
+            </a>
         </div>
-        <a href="https://cash.app/$static9072" target="_blank" class="donate-btn">Donate: $static9072</a>
     </header>
 
     <main>
-        <!-- Settings Panel -->
+        <!-- Sidebar Controls Panel -->
         <div class="panel">
-            <h2>1. Controls</h2>
-            
-            <div class="form-group">
-                <label>Instructions</label>
-                <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4;">
-                    Click and drag a box over any sensitive text, passwords, addresses, or account numbers on the image to permanently blackout the region.
+            <div class="panel-header">
+                <span class="panel-title">Privacy Controls</span>
+                <span id="activeRedactionsCount" class="badge" style="font-size: 0.7rem;">0 redactions</span>
+            </div>
+
+            <!-- Redaction Style Selection -->
+            <div>
+                <div class="section-label">
+                    <span>1. Redaction Style</span>
+                    <span id="currentStyleLabel" style="color: var(--accent); font-weight: 700; font-size: 0.75rem;">Black Box</span>
+                </div>
+                <div class="style-grid">
+                    <div class="style-card active" data-style="blackout" onclick="setRedactionStyle('blackout')">
+                        <div class="style-preview-icon preview-blackout">■</div>
+                        <div class="style-name">Black Box</div>
+                        <span class="style-key">Key 1</span>
+                    </div>
+
+                    <div class="style-card" data-style="blur" onclick="setRedactionStyle('blur')">
+                        <div class="style-preview-icon preview-blur">░</div>
+                        <div class="style-name">Blur</div>
+                        <span class="style-key">Key 2</span>
+                    </div>
+
+                    <div class="style-card" data-style="mosaic" onclick="setRedactionStyle('mosaic')">
+                        <div class="style-preview-icon preview-mosaic">▦</div>
+                        <div class="style-name">Mosaic</div>
+                        <span class="style-key">Key 3</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Intensity Control Slider -->
+            <div class="control-group">
+                <div class="slider-header">
+                    <span id="intensityLabel">Style Intensity</span>
+                    <span id="intensityValue" class="slider-value">100% Solid</span>
+                </div>
+                <input type="range" id="intensitySlider" min="4" max="32" value="16" oninput="updateIntensity(this.value)">
+                <p id="intensityNote" style="font-size: 0.72rem; color: var(--text-dim); line-height: 1.3;">
+                    Black box provides permanent solid blackout.
                 </p>
             </div>
 
-            <button id="clearMasksBtn" class="btn btn-secondary" style="width: 100%;" disabled>
-                Clear Redactions
-            </button>
+            <!-- Precision Magnification Lens Card -->
+            <div>
+                <div class="section-label">
+                    <span>2. Precision Lens</span>
+                    <span style="font-size: 0.7rem; color: var(--text-dim);">Shortcut: M</span>
+                </div>
+                <div class="lens-control-card">
+                    <div class="lens-toggles">
+                        <button id="lensToggleBtn" class="icon-btn active" onclick="toggleMagnifierLens()" style="flex: 1;">
+                            <span>🔍</span>
+                            <span id="lensToggleText">Lens: On</span>
+                        </button>
+                        <div class="zoom-selector">
+                            <button class="zoom-chip active" data-zoom="2" onclick="setLensZoom(2)">2×</button>
+                            <button class="zoom-chip" data-zoom="3" onclick="setLensZoom(3)">3×</button>
+                            <button class="zoom-chip" data-zoom="4" onclick="setLensZoom(4)">4×</button>
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; color: var(--text-muted);">
+                        <span>Position Mode:</span>
+                        <div style="display: flex; gap: 0.35rem;">
+                            <button class="zoom-chip active" id="lensModeFollow" onclick="setLensMode('follow')">Follow Cursor</button>
+                            <button class="zoom-chip" id="lensModeCorner" onclick="setLensMode('corner')">Docked Corner</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-            <button id="downloadBtn" class="btn" style="width: 100%; margin-top: auto;" disabled>
-                Download Flattened Image
+            <!-- History Actions (Undo / Redo) -->
+            <div>
+                <div class="section-label">
+                    <span>3. History & Batch Sync</span>
+                </div>
+                <div class="history-bar">
+                    <button id="undoBtn" class="btn btn-secondary" onclick="undoAction()" disabled title="Undo last redaction (Ctrl+Z)">
+                        ↩ Undo
+                    </button>
+                    <button id="redoBtn" class="btn btn-secondary" onclick="redoAction()" disabled title="Redo redaction (Ctrl+Y)">
+                        ↪ Redo
+                    </button>
+                </div>
+                <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                    <button id="syncBatchBtn" class="btn btn-secondary btn-sm" style="flex: 1;" onclick="syncRedactionsToAll()" title="Copy current redactions to all queued documents" disabled>
+                        📋 Sync to All
+                    </button>
+                    <button id="clearMasksBtn" class="btn btn-danger btn-sm" style="flex: 1;" onclick="clearAllRedactions()" disabled>
+                        🗑️ Clear
+                    </button>
+                </div>
+            </div>
+
+            <!-- Privacy & Export Format Settings -->
+            <div>
+                <div class="section-label">
+                    <span>4. Export Options</span>
+                </div>
+
+                <div class="format-select-row">
+                    <div class="format-pill active" data-format="application/pdf" onclick="setOutputFormat('application/pdf')">
+                        <span>📄 PDF</span>
+                        <span class="format-badge">Flattened</span>
+                    </div>
+                    <div class="format-pill" data-format="image/png" onclick="setOutputFormat('image/png')">
+                        <span>🖼️ PNG</span>
+                        <span class="format-badge">Lossless</span>
+                    </div>
+                    <div class="format-pill" data-format="image/jpeg" onclick="setOutputFormat('image/jpeg')">
+                        <span>📸 JPEG</span>
+                        <span class="format-badge">Photo</span>
+                    </div>
+                </div>
+
+                <label class="option-item" for="stripMetadataCheckbox" style="margin-top: 0.75rem;">
+                    <div class="option-info">
+                        <div class="option-title">
+                            🛡️ Strip All EXIF & Metadata
+                        </div>
+                        <div class="option-desc">
+                            Removes GPS coords, camera serials, device fingerprints, and timestamps.
+                        </div>
+                    </div>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="stripMetadataCheckbox" checked>
+                        <span class="slider"></span>
+                    </div>
+                </label>
+            </div>
+
+            <!-- Primary Export Button -->
+            <button id="downloadBtn" class="btn" style="width: 100%; padding: 0.85rem;" onclick="downloadActiveDocument()" disabled>
+                <span>💾</span>
+                <span id="downloadBtnText">Download Flattened PDF</span>
             </button>
         </div>
 
-        <!-- Workspace Panel -->
+        <!-- Document Workspace Panel -->
         <div class="panel" style="flex: 1;">
-            <h2>2. Document Workspace</h2>
-            
-            <div id="dropzone" class="dropzone">
-                <div style="font-size: 2.5rem;">📄</div>
-                <div>
-                    <p style="font-size: 1rem; font-weight: 500; margin-bottom: 0.25rem;">Drop Document or Screenshot Here</p>
-                    <p style="font-size: 0.8rem; color: var(--text-muted);">Supports PNG, JPG, WebP snapshots</p>
-                </div>
-                <button class="btn btn-secondary" onclick="document.getElementById('docInput').click()">Select File</button>
-                <input type="file" id="docInput" accept="image/jpeg,image/png,image/webp" style="display: none;">
+            <div class="panel-header">
+                <span class="panel-title">Document Workspace</span>
+                <span id="docQueueIndicator" style="font-size: 0.75rem; color: var(--text-dim);">Single document or multi-file batch</span>
             </div>
 
-            <div id="editorArea" style="display: none; flex-direction: column; gap: 1rem; align-items: center;">
-                <div style="width: 100%; display: flex; justify-content: space-between; align-items: center;">
-                    <span id="fileMeta" style="font-size: 0.85rem; color: var(--text-muted);">Ready for Redaction</span>
-                    <button class="btn btn-secondary" style="padding: 0.3rem 0.7rem; font-size: 0.75rem;" onclick="resetWorkspace()">Upload Different File</button>
+            <!-- Initial Dropzone -->
+            <div id="dropzone" class="dropzone">
+                <div class="dropzone-icon">📄</div>
+                <div>
+                    <p style="font-size: 1.15rem; font-weight: 600; margin-bottom: 0.35rem;">
+                        Drop Document(s) or Screenshots Here
+                    </p>
+                    <p style="font-size: 0.82rem; color: var(--text-muted); max-width: 440px; line-height: 1.4;">
+                        Upload single files or multi-document batches (PNG, JPG, WebP). All processing runs strictly local in browser RAM with zero server transmission.
+                    </p>
                 </div>
-                <div class="canvas-container">
-                    <canvas id="redactCanvas"></canvas>
+                
+                <div class="dropzone-actions">
+                    <button class="btn" onclick="document.getElementById('docInput').click()">
+                        📁 Browse File(s)
+                    </button>
+                    <button class="btn btn-secondary" onclick="loadSampleBatch()">
+                        🧪 Try Sample Batch (2 Pages)
+                    </button>
+                </div>
+                <!-- Multi-file input -->
+                <input type="file" id="docInput" multiple accept="image/jpeg,image/png,image/webp,image/avif,image/bmp" style="display: none;">
+            </div>
+
+            <!-- Active Editor Area -->
+            <div id="editorArea" class="editor-workspace" style="display: none;">
+                
+                <!-- Bulk Processing Carousel / Queue Header -->
+                <div class="bulk-queue-container" id="bulkQueueContainer">
+                    <div class="bulk-queue-header">
+                        <span>Batch Queue (<span id="batchCountText">1 document</span>)</span>
+                        <div class="bulk-actions-row">
+                            <button class="icon-btn btn-sm" onclick="document.getElementById('docInput').click()" title="Add more documents to batch">
+                                ➕ Add Files
+                            </button>
+                            <button class="icon-btn btn-sm" id="batchZipBtn" onclick="exportBatchZip()" title="Download entire batch in a zip">
+                                📦 Batch ZIP
+                            </button>
+                            <button class="icon-btn btn-sm" id="batchPdfBtn" onclick="exportBatchMultiPagePdf()" title="Merge all queued documents into one multi-page flattened PDF">
+                                📑 Merge All to PDF
+                            </button>
+                        </div>
+                    </div>
+                    <div class="queue-strip" id="queueStrip">
+                        <!-- Populated dynamically with thumbnails -->
+                    </div>
+                </div>
+
+                <div class="workspace-toolbar">
+                    <div class="file-meta-group">
+                        <span>📄</span>
+                        <span id="fileName" class="file-name-tag">document.png</span>
+                        <span id="fileDimensions" class="file-dim-tag">(0 × 0px)</span>
+                    </div>
+
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button class="icon-btn" onclick="zoomFit()" title="Fit to view">Fit View</button>
+                        <button class="icon-btn" onclick="toggleMagnifierLens()" id="toolbarLensBtn" title="Toggle Precision Magnifier (M)">
+                            🔍 Lens
+                        </button>
+                        <button class="icon-btn" onclick="document.getElementById('docInput').click()" title="Add or switch files">
+                            🔄 Add Files
+                        </button>
+                    </div>
+                </div>
+
+                <div class="canvas-viewport" id="viewport">
+                    <div class="canvas-container" id="canvasContainer">
+                        <canvas id="redactCanvas"></canvas>
+
+                        <!-- Floating Magnification Loupe -->
+                        <div class="magnifier-loupe" id="magnifierLoupe">
+                            <canvas class="magnifier-canvas" id="magnifierCanvas" width="140" height="140"></canvas>
+                            <div class="magnifier-reticle-h"></div>
+                            <div class="magnifier-reticle-v"></div>
+                            <div class="magnifier-coord" id="magnifierCoord">X:0 Y:0</div>
+                        </div>
+                    </div>
+
+                    <!-- Docked Corner Magnifier -->
+                    <div class="docked-lens" id="dockedLens">
+                        <canvas id="dockedCanvas" width="160" height="160" style="width: 100%; height: 100%; display: block;"></canvas>
+                        <div class="magnifier-reticle-h"></div>
+                        <div class="magnifier-reticle-v"></div>
+                        <div class="magnifier-coord" id="dockedCoord">X:0 Y:0</div>
+                    </div>
+
+                    <div class="hud-overlay" id="hud">
+                        <span id="hudTool">Style: Black Box</span>
+                        <span>·</span>
+                        <span id="hudLensStatus">Lens: 2× Active</span>
+                        <span>·</span>
+                        <span>Drag to redact</span>
+                    </div>
                 </div>
             </div>
         </div>
     </main>
 
+    <!-- Keyboard Shortcuts Modal -->
+    <div class="modal-backdrop" id="shortcutsModal" onclick="closeModalOnBackdrop(event)">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">⌨️ Keyboard Shortcuts</div>
+                <button class="close-btn" onclick="toggleShortcutsModal()">&times;</button>
+            </div>
+            <div class="shortcut-table">
+                <div class="shortcut-row">
+                    <span class="shortcut-desc">Undo redaction</span>
+                    <div><kbd class="kbd-key">Ctrl</kbd> + <kbd class="kbd-key">Z</kbd></div>
+                </div>
+                <div class="shortcut-row">
+                    <span class="shortcut-desc">Redo redaction</span>
+                    <div><kbd class="kbd-key">Ctrl</kbd> + <kbd class="kbd-key">Y</kbd></div>
+                </div>
+                <div class="shortcut-row">
+                    <span class="shortcut-desc">Toggle Precision Magnifier Lens</span>
+                    <kbd class="kbd-key">M</kbd>
+                </div>
+                <div class="shortcut-row">
+                    <span class="shortcut-desc">Black Box style</span>
+                    <kbd class="kbd-key">1</kbd>
+                </div>
+                <div class="shortcut-row">
+                    <span class="shortcut-desc">Blur style</span>
+                    <kbd class="kbd-key">2</kbd>
+                </div>
+                <div class="shortcut-row">
+                    <span class="shortcut-desc">Mosaic style</span>
+                    <kbd class="kbd-key">3</kbd>
+                </div>
+                <div class="shortcut-row">
+                    <span class="shortcut-desc">Download active document</span>
+                    <div><kbd class="kbd-key">Ctrl</kbd> + <kbd class="kbd-key">S</kbd></div>
+                </div>
+                <div class="shortcut-row">
+                    <span class="shortcut-desc">Merge entire batch to multi-page PDF</span>
+                    <div><kbd class="kbd-key">Ctrl</kbd> + <kbd class="kbd-key">B</kbd></div>
+                </div>
+                <div class="shortcut-row">
+                    <span class="shortcut-desc">Paste image from clipboard</span>
+                    <div><kbd class="kbd-key">Ctrl</kbd> + <kbd class="kbd-key">V</kbd></div>
+                </div>
+                <div class="shortcut-row">
+                    <span class="shortcut-desc">Open file picker</span>
+                    <div><kbd class="kbd-key">Ctrl</kbd> + <kbd class="kbd-key">O</kbd></div>
+                </div>
+            </div>
+            <button class="btn btn-secondary" style="width: 100%;" onclick="toggleShortcutsModal()">Got it</button>
+        </div>
+    </div>
+
+    <!-- Batch Processing Modal -->
+    <div class="modal-backdrop" id="progressModal">
+        <div class="modal-content" style="max-width: 380px; text-align: center;">
+            <div style="font-size: 1.8rem; margin-bottom: 0.25rem;">⏳</div>
+            <div class="modal-title" id="progressTitle">Processing Documents...</div>
+            <p id="progressDetail" style="font-size: 0.8rem; color: var(--text-muted);">Flattening and rasterizing pages...</p>
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="progressBarFill"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback Toast -->
+    <div id="toast" class="toast">Action completed</div>
+
     <script>
+        // DOM Elements
         const dropzone = document.getElementById('dropzone');
         const docInput = document.getElementById('docInput');
         const editorArea = document.getElementById('editorArea');
         const canvas = document.getElementById('redactCanvas');
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const canvasContainer = document.getElementById('canvasContainer');
+        const viewport = document.getElementById('viewport');
         const downloadBtn = document.getElementById('downloadBtn');
+        const downloadBtnText = document.getElementById('downloadBtnText');
         const clearMasksBtn = document.getElementById('clearMasksBtn');
-        const fileMeta = document.getElementById('fileMeta');
+        const syncBatchBtn = document.getElementById('syncBatchBtn');
+        const undoBtn = document.getElementById('undoBtn');
+        const redoBtn = document.getElementById('redoBtn');
+        const intensitySlider = document.getElementById('intensitySlider');
+        const intensityLabel = document.getElementById('intensityLabel');
+        const intensityValue = document.getElementById('intensityValue');
+        const intensityNote = document.getElementById('intensityNote');
+        const currentStyleLabel = document.getElementById('currentStyleLabel');
+        const activeRedactionsCount = document.getElementById('activeRedactionsCount');
+        const fileNameEl = document.getElementById('fileName');
+        const fileDimEl = document.getElementById('fileDimensions');
+        const hudTool = document.getElementById('hudTool');
+        const hudLensStatus = document.getElementById('hudLensStatus');
+        const stripMetadataCheckbox = document.getElementById('stripMetadataCheckbox');
+        const toast = document.getElementById('toast');
+        const shortcutsModal = document.getElementById('shortcutsModal');
+        const progressModal = document.getElementById('progressModal');
+        const progressTitle = document.getElementById('progressTitle');
+        const progressDetail = document.getElementById('progressDetail');
+        const progressBarFill = document.getElementById('progressBarFill');
 
-        let originalImage = null;
-        let redactions = [];
+        // Magnifier Lens Elements
+        const magnifierLoupe = document.getElementById('magnifierLoupe');
+        const magnifierCanvas = document.getElementById('magnifierCanvas');
+        const magCtx = magnifierCanvas.getContext('2d');
+        const magnifierCoord = document.getElementById('magnifierCoord');
+        const dockedLens = document.getElementById('dockedLens');
+        const dockedCanvas = document.getElementById('dockedCanvas');
+        const dockedCtx = dockedCanvas.getContext('2d');
+        const dockedCoord = document.getElementById('dockedCoord');
+        const lensToggleBtn = document.getElementById('lensToggleBtn');
+        const lensToggleText = document.getElementById('lensToggleText');
+        const toolbarLensBtn = document.getElementById('toolbarLensBtn');
+        const lensModeFollow = document.getElementById('lensModeFollow');
+        const lensModeCorner = document.getElementById('lensModeCorner');
+
+        // Bulk Queue Elements
+        const queueStrip = document.getElementById('queueStrip');
+        const batchCountText = document.getElementById('batchCountText');
+        const docQueueIndicator = document.getElementById('docQueueIndicator');
+
+        // State
+        let queue = []; // Array of { id, name, originalImage, canvasThumbnail, redactions, undoStack, redoStack }
+        let activeDocIndex = 0;
+
+        let currentStyle = 'blackout'; // 'blackout' | 'blur' | 'mosaic'
+        let currentIntensity = 16;
+        let currentFormat = 'application/pdf'; // 'application/pdf' | 'image/png' | 'image/jpeg'
+
+        // Lens State
+        let lensEnabled = true;
+        let lensZoom = 2; // 2, 3, 4
+        let lensMode = 'follow'; // 'follow' | 'corner'
+
         let isDrawing = false;
         let startX = 0;
         let startY = 0;
 
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropzone.addEventListener(eventName, (e) => {
+        // Settings per style
+        const styleDefaults = {
+            blackout: { default: 16, min: 1, max: 100, label: 'Solid Blackout', note: '100% opaque permanent true black pixel censorship.' },
+            blur: { default: 16, min: 4, max: 40, label: 'Blur Radius', note: 'Obfuscates with smooth multi-sample frosted blur.' },
+            mosaic: { default: 14, min: 6, max: 36, label: 'Block Size', note: 'Destructive digital pixelation block censorship.' }
+        };
+
+        // File Drag & Drop Listeners
+        ['dragenter', 'dragover'].forEach(name => {
+            dropzone.addEventListener(name, (e) => {
                 e.preventDefault();
                 dropzone.classList.add('dragover');
-            }, false);
+            });
         });
 
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropzone.addEventListener(eventName, (e) => {
+        ['dragleave', 'drop'].forEach(name => {
+            dropzone.addEventListener(name, (e) => {
                 e.preventDefault();
                 dropzone.classList.remove('dragover');
-            }, false);
+            });
         });
 
         dropzone.addEventListener('drop', (e) => {
-            const files = e.dataTransfer.files;
-            if (files.length > 0) handleFile(files[0]);
+            if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+                handleMultipleFiles(Array.from(e.dataTransfer.files));
+            }
         });
 
         docInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) handleFile(e.target.files[0]);
+            if (e.target.files && e.target.files.length > 0) {
+                handleMultipleFiles(Array.from(e.target.files));
+                e.target.value = ''; // reset so same files can be re-added
+            }
         });
 
-        function handleFile(file) {
-            if (!file
+        // Clipboard Paste Listener
+        window.addEventListener('paste', (e) => {
+            const items = (e.clipboardData || window.clipboardData)?.items;
+            if (!items) return;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    const blob = items[i].getAsFile();
+                    const pastedFile = new File([blob], `pasted_screenshot_${Date.now()}.png`, { type: blob.type });
+                    handleMultipleFiles([pastedFile]);
+                    showToast('Screenshot added from clipboard!');
+                    break;
+                }
+            }
+        });
+
+        // Bulk File Loading
+        async function handleMultipleFiles(files) {
+            const validFiles = files.filter(f => f.type.startsWith('image/') || f.name.match(/\.(png|jpe?g|webp|bmp|avif)$/i));
+            if (validFiles.length === 0) {
+                showToast('Please select valid image file(s)');
+                return;
+            }
+
+            const initialQueueLen = queue.length;
+
+            for (const file of validFiles) {
+                await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const docId = 'doc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+                            const thumbUrl = createThumbnail(img);
+                            queue.push({
+                                id: docId,
+                                name: file.name,
+                                originalImage: img,
+                                thumbUrl: thumbUrl,
+                                redactions: [],
+                                undoStack: [],
+                                redoStack: []
+                            });
+                            resolve();
+                        };
+                        img.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            if (initialQueueLen === 0 && queue.length > 0) {
+                activeDocIndex = 0;
+                loadDocumentToWorkspace(0);
+                dropzone.style.display = 'none';
+                editorArea.style.display = 'flex';
+                downloadBtn.disabled = false;
+            }
+
+            updateQueueUI();
+            showToast(`Loaded ${validFiles.length} document${validFiles.length === 1 ? '' : 's'} into batch queue`);
+        }
+
+        function createThumbnail(img) {
+            const tCanvas = document.createElement('canvas');
+            tCanvas.width = 48;
+            tCanvas.height = 48;
+            const tCtx = tCanvas.getContext('2d');
+            tCtx.drawImage(img, 0, 0, 48, 48);
+            return tCanvas.toDataURL('image/jpeg', 0.7);
+        }
+
+        function loadDocumentToWorkspace(index) {
+            if (!queue[index]) return;
+            activeDocIndex = index;
+            const doc = queue[index];
+
+            canvas.width = doc.originalImage.naturalWidth || doc.originalImage.width;
+            canvas.height = doc.originalImage.naturalHeight || doc.originalImage.height;
+
+            fileNameEl.textContent = doc.name;
+            fileDimEl.textContent = `(${canvas.width} × ${canvas.height}px)`;
+
+            redraw();
+            updateHistoryUI();
+            updateQueueUI();
+        }
+
+        function removeDocumentFromQueue(index, e) {
+            if (e) e.stopPropagation();
+            if (queue.length <= 1) {
+                // If last document removed, reset to dropzone
+                queue = [];
+                activeDocIndex = 0;
+                editorArea.style.display = 'none';
+                dropzone.style.display = 'flex';
+                downloadBtn.disabled = true;
+                updateQueueUI();
+                return;
+            }
+
+            queue.splice(index, 1);
+            if (activeDocIndex >= queue.length) {
+                activeDocIndex = queue.length - 1;
+            }
+            loadDocumentToWorkspace(activeDocIndex);
+            showToast('Document removed from batch');
+        }
+
+        function updateQueueUI() {
+            queueStrip.innerHTML = '';
+            batchCountText.textContent = `${queue.length} document${queue.length === 1 ? '' : 's'}`;
+            docQueueIndicator.textContent = queue.length > 1 ? `Batch of ${queue.length} documents` : 'Single document active';
+            syncBatchBtn.disabled = queue.length <= 1 || (queue[activeDocIndex] && queue[activeDocIndex].redactions.length === 0);
+
+            queue.forEach((doc, idx) => {
+                const item = document.createElement('div');
+                item.className = `queue-item ${idx === activeDocIndex ? 'active' : ''}`;
+                item.onclick = () => loadDocumentToWorkspace(idx);
+
+                item.innerHTML = `
+                    <img src="${doc.thumbUrl}" class="queue-thumb" alt="thumbnail">
+                    <div class="queue-meta">
+                        <span class="queue-name" title="${doc.name}">${doc.name}</span>
+                        <span class="queue-status">${doc.redactions.length} redacted</span>
+                    </div>
+                    <span class="queue-close" onclick="removeDocumentFromQueue(${idx}, event)" title="Remove document">✕</span>
+                `;
+                queueStrip.appendChild(item);
+            });
+        }
+
+        // Sync Redactions across all queued documents
+        function syncRedactionsToAll() {
+            const currentDoc = queue[activeDocIndex];
+            if (!currentDoc || currentDoc.redactions.length === 0) return;
+
+            const redactionsCopy = JSON.parse(JSON.stringify(currentDoc.redactions));
+
+            queue.forEach((doc, idx) => {
+                if (idx !== activeDocIndex) {
+                    doc.undoStack.push(JSON.parse(JSON.stringify(doc.redactions)));
+                    doc.redactions = JSON.parse(JSON.stringify(redactionsCopy));
+                    doc.redoStack = [];
+                }
+            });
+
+            updateQueueUI();
+            showToast(`Synced ${redactionsCopy.length} redaction zones across all ${queue.length} documents!`);
+        }
+
+        // Sample Batch Generator
+        function loadSampleBatch() {
+            // Document 1: Medical Invoice
+            const canvas1 = document.createElement('canvas');
+            canvas1.width = 1000;
+            canvas1.height = 700;
+            const ctx1 = canvas1.getContext('2d');
+            ctx1.fillStyle = '#ffffff';
+            ctx1.fillRect(0, 0, 1000, 700);
+            ctx1.fillStyle = '#1e1b4b';
+            ctx1.font = 'bold 24px system-ui, sans-serif';
+            ctx1.fillText('CONFIDENTIAL MEDICAL INVOICE #A-901', 50, 70);
+            ctx1.fillStyle = '#4b5563';
+            ctx1.font = '14px system-ui, sans-serif';
+            ctx1.fillText('PATIENT: Jonathan C. Vance  ·  SSN: 492-01-8841', 50, 110);
+            ctx1.fillText('CARD NUMBER: 4128-0098-7721-3491  ·  EXP: 08/29', 50, 140);
+            ctx1.fillText('DIAGNOSIS CODE: ICD-10-CM F41.1 · CONFIDENTIAL', 50, 170);
+            ctx1.fillStyle = '#f3f4f6';
+            ctx1.fillRect(50, 200, 900, 420);
+            ctx1.fillStyle = '#374151';
+            ctx1.font = '13px monospace';
+            ctx1.fillText('DETAILED MEDICAL ITEMIZATION & LAB RESULTS', 70, 240);
+            ctx1.fillText('Consultation Specialist Fee:          $450.00', 70, 280);
+            ctx1.fillText('Genetic Marker Screening:             $1,200.00', 70, 310);
+            ctx1.fillText('Insurance Policy Group ID:            GRP-88219-X', 70, 340);
+            ctx1.fillText('Subscriber ID:                        SUB-40912440', 70, 370);
+
+            // Document 2: Patient Registration Sheet
+            const canvas2 = document.createElement('canvas');
+            canvas2.width = 1000;
+            canvas2.height = 700;
+            const ctx2 = canvas2.getContext('2d');
+            ctx2.fillStyle = '#ffffff';
+            ctx2.fillRect(0, 0, 1000, 700);
+            ctx2.fillStyle = '#111827';
+            ctx2.font = 'bold 24px system-ui, sans-serif';
+            ctx2.fillText('PATIENT INTAKE & DIRECT CONSENT FORM', 50, 70);
+            ctx2.fillStyle = '#4b5563';
+            ctx2.font = '14px system-ui, sans-serif';
+            ctx2.fillText('HOME ADDRESS: 742 Evergreen Terrace, Springfield, OR 97477', 50, 110);
+            ctx2.fillText('EMERGENCY CONTACT: Sarah Vance (+1 541-555-0199)', 50, 140);
+            ctx2.fillText('EMPLOYER / INCOME: Acme Technologies ($145,000/yr)', 50, 170);
+            ctx2.fillStyle = '#fef2f2';
+            ctx2.fillRect(50, 200, 900, 420);
+            ctx2.fillStyle = '#991b1b';
+            ctx2.font = '13px monospace';
+            ctx2.fillText('SENSITIVE REPRODUCTIVE HEALTH & PSYCHIATRIC HISTORY', 70, 240);
+            ctx2.fillText('Prescribed Medications:               Alprazolam 0.5mg PRN', 70, 280);
+            ctx2.fillText('Prior Hospitalizations:               Springfield General 2021', 70, 310);
+            ctx2.fillText('Authorized Signature:                 Jonathan Vance (Signed)', 70, 370);
+
+            const img1 = new Image();
+            img1.onload = () => {
+                const img2 = new Image();
+                img2.onload = () => {
+                    queue = [
+                        {
+                            id: 'doc_1',
+                            name: 'Medical_Invoice_Page1.png',
+                            originalImage: img1,
+                            thumbUrl: createThumbnail(img1),
+                            redactions: [],
+                            undoStack: [],
+                            redoStack: []
+                        },
+                        {
+                            id: 'doc_2',
+                            name: 'Patient_Intake_Page2.png',
+                            originalImage: img2,
+                            thumbUrl: createThumbnail(img2),
+                            redactions: [],
+                            undoStack: [],
+                            redoStack: []
+                        }
+                    ];
+                    activeDocIndex = 0;
+                    loadDocumentToWorkspace(0);
+                    dropzone.style.display = 'none';
+                    editorArea.style.display = 'flex';
+                    downloadBtn.disabled = false;
+                    updateQueueUI();
+                    showToast('Loaded 2-page sample batch!');
+                };
+                img2.src = canvas2.toDataURL('image/png');
+            };
+            img1.src = canvas1.toDataURL('image/png');
+        }
+
+        // Style Switching
+        function setRedactionStyle(style) {
+            currentStyle = style;
+            document.querySelectorAll('.style-card').forEach(card => {
+                card.classList.toggle('active', card.dataset.style === style);
+            });
+
+            const config = styleDefaults[style];
+            currentStyleLabel.textContent = config.label;
+            intensityLabel.textContent = style === 'blackout' ? 'Security Level' : `${config.label} Intensity`;
+            intensityNote.textContent = config.note;
+
+            if (style === 'blackout') {
+                intensitySlider.disabled = true;
+                intensityValue.textContent = '100% Solid';
+            } else {
+                intensitySlider.disabled = false;
+                intensitySlider.min = config.min;
+                intensitySlider.max = config.max;
+                currentIntensity = Math.min(config.max, Math.max(config.min, currentIntensity || config.default));
+                intensitySlider.value = currentIntensity;
+                intensityValue.textContent = `${currentIntensity}px`;
+            }
+
+            hudTool.textContent = `Style: ${config.label}`;
+        }
+
+        function updateIntensity(val) {
+            currentIntensity = parseInt(val, 10);
+            intensityValue.textContent = `${currentIntensity}px`;
+        }
+
+        // Format Selection
+        function setOutputFormat(format) {
+            currentFormat = format;
+            document.querySelectorAll('.format-pill').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.format === format);
+            });
+
+            if (format === 'application/pdf') {
+                downloadBtnText.textContent = 'Download Flattened PDF';
+            } else if (format === 'image/png') {
+                downloadBtnText.textContent = 'Download Lossless PNG';
+            } else {
+                downloadBtnText.textContent = 'Download Flattened JPEG';
+            }
+
+            showToast(`Output set to ${format === 'application/pdf' ? 'PDF' : format.replace('image/', '').toUpperCase()}`);
+        }
+
+        // Precision Magnification Lens Controls
+        function toggleMagnifierLens() {
+            lensEnabled = !lensEnabled;
+            lensToggleBtn.classList.toggle('active', lensEnabled);
+            toolbarLensBtn.classList.toggle('active', lensEnabled);
+            lensToggleText.textContent = `Lens: ${lensEnabled ? 'On' : 'Off'}`;
+            hudLensStatus.textContent = lensEnabled ? `Lens: ${lensZoom}× Active` : 'Lens: Off';
+            
+            if (!lensEnabled) {
+                magnifierLoupe.style.display = 'none';
+                dockedLens.style.display = 'none';
+            } else if (lensMode === 'corner') {
+                dockedLens.style.display = 'block';
+            }
+            showToast(`Precision Lens ${lensEnabled ? 'Enabled' : 'Disabled'}`);
+        }
+
+        function setLensZoom(zoom) {
+            lensZoom = zoom;
+            document.querySelectorAll('.zoom-chip[data-zoom]').forEach(chip => {
+                chip.classList.toggle('active', parseInt(chip.dataset.zoom, 10) === zoom);
+            });
+            hudLensStatus.textContent = `Lens: ${lensZoom}× Active`;
+            showToast(`Lens zoom set to ${zoom}×`);
+        }
+
+        function setLensMode(mode) {
+            lensMode = mode;
+            lensModeFollow.classList.toggle('active', mode === 'follow');
+            lensModeCorner.classList.toggle('active', mode === 'corner');
+
+            if (mode === 'follow') {
+                dockedLens.style.display = 'none';
+            } else if (lensEnabled) {
+                dockedLens.style.display = 'block';
+                magnifierLoupe.style.display = 'none';
+            }
+            showToast(`Lens position: ${mode === 'follow' ? 'Follow Cursor' : 'Docked Corner'}`);
+        }
+
+        // Update Magnifier Render
+        function updateMagnifier(canvasX, canvasY, clientX, clientY) {
+            if (!lensEnabled || !queue[activeDocIndex]) return;
+
+            const targetCanvas = lensMode === 'follow' ? magnifierCanvas : dockedCanvas;
+            const targetCtx = lensMode === 'follow' ? magCtx : dockedCtx;
+            const coordEl = lensMode === 'follow' ? magnifierCoord : dockedCoord;
+
+            const size = targetCanvas.width;
+            const half = size / 2;
+            const sourceSpan = size / lensZoom;
+
+            // Clear
+            targetCtx.fillStyle = '#06070a';
+            targetCtx.fillRect(0, 0, size, size);
+
+            targetCtx.imageSmoothingEnabled = true;
+            targetCtx.imageSmoothingQuality = 'high';
+
+            // Draw magnified canvas region
+            const sx = canvasX - sourceSpan / 2;
+            const sy = canvasY - sourceSpan / 2;
+
+            targetCtx.drawImage(
+                canvas,
+                sx, sy, sourceSpan, sourceSpan,
+                0, 0, size, size
+            );
+
+            // Subtle pixel grid if high zoom
+            if (lensZoom >= 3) {
+                targetCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+                targetCtx.lineWidth = 0.5;
+                const gridStep = lensZoom;
+                for (let gx = 0; gx < size; gx += gridStep * 4) {
+                    targetCtx.beginPath();
+                    targetCtx.moveTo(gx, 0);
+                    targetCtx.lineTo(gx, size);
+                    targetCtx.stroke();
+                }
+                for (let gy = 0; gy < size; gy += gridStep * 4) {
+                    targetCtx.beginPath();
+                    targetCtx.moveTo(0, gy);
+                    targetCtx.lineTo(size, gy);
+                    targetCtx.stroke();
+                }
+            }
+
+            coordEl.textContent = `X:${Math.round(canvasX)} Y:${Math.round(canvasY)}`;
+
+            if (lensMode === 'follow') {
+                const rect = canvasContainer.getBoundingClientRect();
+                const relX = clientX - rect.left;
+                const relY = clientY - rect.top;
+
+                magnifierLoupe.style.left = `${relX}px`;
+                magnifierLoupe.style.top = `${relY - 80}px`; // position slightly above cursor so it doesn't block touch/mouse
+                magnifierLoupe.style.display = 'block';
+            } else {
+                dockedLens.style.display = 'block';
+            }
+        }
+
+        // Coordinate Mapping
+        function getCanvasCoordinates(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            let clientX, clientY;
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else if (e.changedTouches && e.changedTouches.length > 0) {
+                clientX = e.changedTouches[0].clientX;
+                clientY = e.changedTouches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+
+            return {
+                x: Math.max(0, Math.min(canvas.width, (clientX - rect.left) * scaleX)),
+                y: Math.max(0, Math.min(canvas.height, (clientY - rect.top) * scaleY)),
+                clientX: clientX,
+                clientY: clientY
+            };
+        }
+
+        // Interactive Drawing Events
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', moveDrawing);
+        canvas.addEventListener('mouseup', finishDrawing);
+        canvas.addEventListener('mouseleave', () => {
+            if (isDrawing) finishDrawing();
+            if (lensMode === 'follow') magnifierLoupe.style.display = 'none';
+        });
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            startDrawing(e);
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            moveDrawing(e);
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            finishDrawing(e);
+            if (lensMode === 'follow') magnifierLoupe.style.display = 'none';
+        });
+
+        function startDrawing(e) {
+            const doc = queue[activeDocIndex];
+            if (!doc || !doc.originalImage) return;
+
+            const pos = getCanvasCoordinates(e);
+            isDrawing = true;
+            startX = pos.x;
+            startY = pos.y;
+
+            updateMagnifier(pos.x, pos.y, pos.clientX, pos.clientY);
+        }
+
+        function moveDrawing(e) {
+            const doc = queue[activeDocIndex];
+            if (!doc) return;
+
+            const pos = getCanvasCoordinates(e);
+
+            if (isDrawing) {
+                redraw();
+
+                const curX = Math.min(startX, pos.x);
+                const curY = Math.min(startY, pos.y);
+                const curW = Math.abs(pos.x - startX);
+                const curH = Math.abs(pos.y - startY);
+
+                renderRedactionBox(ctx, {
+                    x: curX,
+                    y: curY,
+                    width: curW,
+                    height: curH,
+                    style: currentStyle,
+                    intensity: currentIntensity
+                });
+
+                ctx.strokeStyle = '#7c3aed';
+                ctx.lineWidth = Math.max(1, Math.min(canvas.width, canvas.height) / 500);
+                ctx.strokeRect(curX, curY, curW, curH);
+            }
+
+            updateMagnifier(pos.x, pos.y, pos.clientX, pos.clientY);
+        }
+
+        function finishDrawing(e) {
+            if (!isDrawing) return;
+            isDrawing = false;
+            const doc = queue[activeDocIndex];
+            if (!doc) return;
+
+            let curX = startX;
+            let curY = startY;
+            if (e) {
+                const pos = getCanvasCoordinates(e);
+                curX = pos.x;
+                curY = pos.y;
+            }
+
+            const minX = Math.min(startX, curX);
+            const minY = Math.min(startY, curY);
+            const width = Math.abs(curX - startX);
+            const height = Math.abs(curY - startY);
+
+            if (width > 3 && height > 3) {
+                pushUndoState();
+                doc.redactions.push({
+                    id: 'redact_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                    x: minX,
+                    y: minY,
+                    width: width,
+                    height: height,
+                    style: currentStyle,
+                    intensity: currentIntensity
+                });
+                doc.redoStack = [];
+                updateHistoryUI();
+                updateQueueUI();
+            }
+
+            redraw();
+        }
+
+        // Undo & Redo System
+        function pushUndoState() {
+            const doc = queue[activeDocIndex];
+            if (!doc) return;
+            doc.undoStack.push(JSON.parse(JSON.stringify(doc.redactions)));
+            if (doc.undoStack.length > 50) doc.undoStack.shift();
+        }
+
+        function undoAction() {
+            const doc = queue[activeDocIndex];
+            if (!doc || doc.undoStack.length === 0) return;
+            doc.redoStack.push(JSON.parse(JSON.stringify(doc.redactions)));
+            doc.redactions = doc.undoStack.pop();
+            redraw();
+            updateHistoryUI();
+            updateQueueUI();
+            showToast('Undo performed');
+        }
+
+        function redoAction() {
+            const doc = queue[activeDocIndex];
+            if (!doc || doc.redoStack.length === 0) return;
+            doc.undoStack.push(JSON.parse(JSON.stringify(doc.redactions)));
+            doc.redactions = doc.redoStack.pop();
+            redraw();
+            updateHistoryUI();
+            updateQueueUI();
+            showToast('Redo performed');
+        }
+
+        function clearAllRedactions() {
+            const doc = queue[activeDocIndex];
+            if (!doc || doc.redactions.length === 0) return;
+            pushUndoState();
+            doc.redactions = [];
+            doc.redoStack = [];
+            redraw();
+            updateHistoryUI();
+            updateQueueUI();
+            showToast('All redactions cleared for this document');
+        }
+
+        function updateHistoryUI() {
+            const doc = queue[activeDocIndex];
+            if (!doc) {
+                undoBtn.disabled = true;
+                redoBtn.disabled = true;
+                clearMasksBtn.disabled = true;
+                activeRedactionsCount.textContent = '0 redactions';
+                return;
+            }
+            undoBtn.disabled = doc.undoStack.length === 0;
+            redoBtn.disabled = doc.redoStack.length === 0;
+            clearMasksBtn.disabled = doc.redactions.length === 0;
+            activeRedactionsCount.textContent = `${doc.redactions.length} redaction${doc.redactions.length === 1 ? '' : 's'}`;
+        }
+
+        // Canvas Rendering Pipeline
+        function redraw() {
+            const doc = queue[activeDocIndex];
+            if (!doc || !doc.originalImage) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(doc.originalImage, 0, 0);
+
+            for (let i = 0; i < doc.redactions.length; i++) {
+                renderRedactionBox(ctx, doc.redactions[i]);
+            }
+        }
+
+        // Render Redaction Box
+        function renderRedactionBox(targetCtx, r) {
+            const x = Math.max(0, Math.floor(r.x));
+            const y = Math.max(0, Math.floor(r.y));
+            const w = Math.min(targetCtx.canvas.width - x, Math.ceil(r.width));
+            const h = Math.min(targetCtx.canvas.height - y, Math.ceil(r.height));
+            if (w <= 0 || h <= 0) return;
+
+            if (r.style === 'blackout') {
+                targetCtx.fillStyle = '#000000';
+                targetCtx.fillRect(x, y, w, h);
+            } else if (r.style === 'mosaic') {
+                applyMosaic(targetCtx, x, y, w, h, r.intensity || 14);
+            } else if (r.style === 'blur') {
+                applyBlur(targetCtx, x, y, w, h, r.intensity || 16);
+            }
+        }
+
+        // Mosaic Algorithm
+        function applyMosaic(targetCtx, x, y, width, height, blockSize) {
+            blockSize = Math.max(4, Math.min(48, Math.round(blockSize)));
+            const imgData = targetCtx.getImageData(x, y, width, height);
+            const data = imgData.data;
+
+            for (let by = 0; by < height; by += blockSize) {
+                for (let bx = 0; bx < width; bx += blockSize) {
+                    let r = 0, g = 0, b = 0, a = 0, count = 0;
+                    const bw = Math.min(blockSize, width - bx);
+                    const bh = Math.min(blockSize, height - by);
+
+                    for (let py = 0; py < bh; py++) {
+                        for (let px = 0; px < bw; px++) {
+                            const idx = ((by + py) * width + (bx + px)) * 4;
+                            r += data[idx];
+                            g += data[idx + 1];
+                            b += data[idx + 2];
+                            a += data[idx + 3];
+                            count++;
+                        }
+                    }
+
+                    r = Math.round(r / count);
+                    g = Math.round(g / count);
+                    b = Math.round(b / count);
+                    a = Math.round(a / count);
+
+                    for (let py = 0; py < bh; py++) {
+                        for (let px = 0; px < bw; px++) {
+                            const idx = ((by + py) * width + (bx + px)) * 4;
+                            data[idx] = r;
+                            data[idx + 1] = g;
+                            data[idx + 2] = b;
+                            data[idx + 3] = a;
+                        }
+                    }
+                }
+            }
+            targetCtx.putImageData(imgData, x, y);
+        }
+
+        // Blur Algorithm
+        function applyBlur(targetCtx, x, y, width, height, radius) {
+            radius = Math.max(4, Math.min(48, radius));
+            const off = document.createElement('canvas');
+            const factor = Math.max(2, Math.round(radius / 2.5));
+            off.width = Math.max(1, Math.floor(width / factor));
+            off.height = Math.max(1, Math.floor(height / factor));
+            const oCtx = off.getContext('2d');
+
+            oCtx.imageSmoothingEnabled = true;
+            oCtx.imageSmoothingQuality = 'medium';
+            oCtx.drawImage(targetCtx.canvas, x, y, width, height, 0, 0, off.width, off.height);
+
+            const smallData = oCtx.getImageData(0, 0, off.width, off.height);
+            boxBlurBuffer(smallData.data, off.width, off.height, 2);
+            oCtx.putImageData(smallData, 0, 0);
+
+            targetCtx.save();
+            targetCtx.beginPath();
+            targetCtx.rect(x, y, width, height);
+            targetCtx.clip();
+
+            targetCtx.imageSmoothingEnabled = true;
+            targetCtx.imageSmoothingQuality = 'high';
+            targetCtx.drawImage(off, 0, 0, off.width, off.height, x, y, width, height);
+            targetCtx.restore();
+        }
+
+        function boxBlurBuffer(data, w, h, r) {
+            const copy = new Uint8ClampedArray(data);
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    let tr = 0, tg = 0, tb = 0, count = 0;
+                    for (let dx = -r; dx <= r; dx++) {
+                        const nx = Math.min(w - 1, Math.max(0, x + dx));
+                        const idx = (y * w + nx) * 4;
+                        tr += copy[idx];
+                        tg += copy[idx + 1];
+                        tb += copy[idx + 2];
+                        count++;
+                    }
+                    const outIdx = (y * w + x) * 4;
+                    data[outIdx] = tr / count;
+                    data[outIdx + 1] = tg / count;
+                    data[outIdx + 2] = tb / count;
+                }
+            }
+        }
+
+        // Render any document in the queue to an offscreen canvas
+        function renderDocumentToOffscreenCanvas(doc) {
+            const offCanvas = document.createElement('canvas');
+            offCanvas.width = doc.originalImage.naturalWidth || doc.originalImage.width;
+            offCanvas.height = doc.originalImage.naturalHeight || doc.originalImage.height;
+            const offCtx = offCanvas.getContext('2d', { willReadFrequently: true });
+
+            offCtx.drawImage(doc.originalImage, 0, 0);
+            for (let i = 0; i < doc.redactions.length; i++) {
+                renderRedactionBox(offCtx, doc.redactions[i]);
+            }
+            return offCanvas;
+        }
+
+        // Single Document Export (PDF, PNG, JPEG)
+        async function downloadActiveDocument() {
+            const doc = queue[activeDocIndex];
+            if (!doc || !doc.originalImage) return;
+
+            redraw();
+            const cleanBase = doc.name.replace(/\.[^/.]+$/, '');
+
+            if (currentFormat === 'application/pdf') {
+                showToast('Generating flattened PDF...');
+                await exportSinglePdf(canvas, cleanBase + '_redacted.pdf');
+            } else {
+                const ext = currentFormat === 'image/jpeg' ? 'jpg' : 'png';
+                const finalName = `${cleanBase}_redacted.${ext}`;
+                canvas.toBlob((blob) => {
+                    if (!blob) return;
+                    triggerDownload(blob, finalName);
+                    showToast(`Downloaded ${finalName}!`);
+                }, currentFormat, 0.95);
+            }
+        }
+
+        // Generate Flattened Single PDF
+        async function exportSinglePdf(sourceCanvas, filename) {
+            const w = sourceCanvas.width;
+            const h = sourceCanvas.height;
+            const orientation = w > h ? 'landscape' : 'portrait';
+
+            // Use jsPDF (100% flattened raster image, zero selectable text layers)
+            if (window.jspdf && window.jspdf.jsPDF) {
+                const pdf = new window.jspdf.jsPDF({
+                    orientation: orientation,
+                    unit: 'pt',
+                    format: [w, h]
+                });
+
+                if (stripMetadataCheckbox.checked) {
+                    pdf.setProperties({
+                        title: '',
+                        subject: '',
+                        author: '',
+                        keywords: '',
+                        creator: 'RedactZero Privacy Engine (Flattened)'
+                    });
+                }
+
+                const imgData = sourceCanvas.toDataURL('image/jpeg', 0.95);
+                pdf.addImage(imgData, 'JPEG', 0, 0, w, h);
+                pdf.save(filename);
+                showToast(`Flattened PDF downloaded: ${filename}`);
+            } else {
+                showToast('PDF engine loading, please try again in a moment');
+            }
+        }
+
+        // Batch Export All to Multi-Page PDF
+        async function exportBatchMultiPagePdf() {
+            if (queue.length === 0) {
+                showToast('Queue is empty');
+                return;
+            }
+
+            if (!window.jspdf || !window.jspdf.jsPDF) {
+                showToast('PDF generator is initializing, please retry');
+                return;
+            }
+
+            showProgressModal('Merging Batch to Multi-Page PDF', `Rasterizing 0 of ${queue.length} pages...`, 0);
+
+            // Yield to browser UI
+            await new Promise(r => setTimeout(r, 60));
+
+            let pdf = null;
+
+            for (let i = 0; i < queue.length; i++) {
+                const doc = queue[i];
+                updateProgressModal(`Rasterizing page ${i + 1} of ${queue.length}: ${doc.name}`, Math.round((i / queue.length) * 100));
+                await new Promise(r => setTimeout(r, 40));
+
+                const offCanvas = renderDocumentToOffscreenCanvas(doc);
+                const w = offCanvas.width;
+                const h = offCanvas.height;
+                const orientation = w > h ? 'landscape' : 'portrait';
+
+                if (i === 0) {
+                    pdf = new window.jspdf.jsPDF({
+                        orientation: orientation,
+                        unit: 'pt',
+                        format: [w, h]
+                    });
+                } else {
+                    pdf.addPage([w, h], orientation);
+                }
+
+                const imgData = offCanvas.toDataURL('image/jpeg', 0.95);
+                pdf.addImage(imgData, 'JPEG', 0, 0, w, h);
+            }
+
+            if (stripMetadataCheckbox.checked && pdf) {
+                pdf.setProperties({
+                    title: '',
+                    subject: '',
+                    author: '',
+                    keywords: '',
+                    creator: 'RedactZero Privacy Engine'
+                });
+            }
+
+            updateProgressModal('Finalizing PDF binary stream...', 98);
+            await new Promise(r => setTimeout(r, 50));
+
+            const batchFilename = `RedactZero_MultiPage_Batch_${Date.now()}.pdf`;
+            pdf.save(batchFilename);
+            closeProgressModal();
+            showToast(`Merged ${queue.length} documents into ${batchFilename}!`);
+        }
+
+        // Batch Export All to ZIP Archive
+        async function exportBatchZip() {
+            if (queue.length === 0) {
+                showToast('Queue is empty');
+                return;
+            }
+
+            if (!window.JSZip) {
+                showToast('ZIP archiver initializing, please retry');
+                return;
+            }
+
+            showProgressModal('Generating Batch ZIP Archive', `Processing 0 of ${queue.length} files...`, 0);
+            await new Promise(r => setTimeout(r, 60));
+
+            const zip = new window.JSZip();
+            const format = currentFormat;
+            const ext = format === 'application/pdf' ? 'pdf' : (format === 'image/jpeg' ? 'jpg' : 'png');
+
+            for (let i = 0; i < queue.length; i++) {
+                const doc = queue[i];
+                updateProgressModal(`Flattening document ${i + 1} of ${queue.length}: ${doc.name}`, Math.round((i / queue.length) * 90));
+                await new Promise(r => setTimeout(r, 30));
+
+                const offCanvas = renderDocumentToOffscreenCanvas(doc);
+                const cleanBase = doc.name.replace(/\.[^/.]+$/, '');
+                const entryName = `${cleanBase}_redacted.${ext}`;
+
+                if (format === 'application/pdf') {
+                    const w = offCanvas.width;
+                    const h = offCanvas.height;
+                    const pdfDoc = new window.jspdf.jsPDF({
+                        orientation: w > h ? 'landscape' : 'portrait',
+                        unit: 'pt',
+                        format: [w, h]
+                    });
+                    const imgData = offCanvas.toDataURL('image/jpeg', 0.95);
+                    pdfDoc.addImage(imgData, 'JPEG', 0, 0, w, h);
+                    const pdfBlob = pdfDoc.output('blob');
+                    zip.file(entryName, pdfBlob);
+                } else {
+                    const blob = await new Promise(res => offCanvas.toBlob(res, format, 0.95));
+                    zip.file(entryName, blob);
+                }
+            }
+
+            updateProgressModal('Compressing ZIP archive...', 95);
+            await new Promise(r => setTimeout(r, 50));
+
+            const zipBlob = await zip.generateAsync({ type: 'blob' });
+            const zipName = `RedactZero_Batch_Export_${Date.now()}.zip`;
+            triggerDownload(zipBlob, zipName);
+            closeProgressModal();
+            showToast(`Exported all ${queue.length} documents in ${zipName}!`);
+        }
+
+        function triggerDownload(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
+        }
+
+        // Progress Modal Helpers
+        function showProgressModal(title, detail, pct) {
+            progressTitle.textContent = title;
+            progressDetail.textContent = detail;
+            progressBarFill.style.width = `${pct}%`;
+            progressModal.classList.add('open');
+        }
+
+        function updateProgressModal(detail, pct) {
+            progressDetail.textContent = detail;
+            progressBarFill.style.width = `${pct}%`;
+        }
+
+        function closeProgressModal() {
+            progressModal.classList.remove('open');
+        }
+
+        // Keyboard Shortcuts
+        window.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' && e.target.type !== 'checkbox' && e.target.type !== 'range') return;
+
+            // Undo: Ctrl+Z
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                undoAction();
+                return;
+            }
+
+            // Redo: Ctrl+Y or Ctrl+Shift+Z
+            if (((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') ||
+                ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'z')) {
+                e.preventDefault();
+                redoAction();
+                return;
+            }
+
+            // Download active: Ctrl+S
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                e.preventDefault();
+                downloadActiveDocument();
+                return;
+            }
+
+            // Merge Batch to PDF: Ctrl+B
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+                e.preventDefault();
+                exportBatchMultiPagePdf();
+                return;
+            }
+
+            // Open File: Ctrl+O
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
+                e.preventDefault();
+                docInput.click();
+                return;
+            }
+
+            // Toggle Magnifier Lens: M key
+            if (e.key.toLowerCase() === 'm') {
+                toggleMagnifierLens();
+                return;
+            }
+
+            // Style Selection keys (1, 2, 3)
+            if (e.key === '1') {
+                setRedactionStyle('blackout');
+                showToast('Style: Black Box');
+            } else if (e.key === '2') {
+                setRedactionStyle('blur');
+                showToast('Style: Blur');
+            } else if (e.key === '3') {
+                setRedactionStyle('mosaic');
+                showToast('Style: Mosaic');
+            } else if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
+                toggleShortcutsModal();
+            } else if (e.key === 'Escape') {
+                if (shortcutsModal.classList.contains('open')) {
+                    toggleShortcutsModal();
+                }
+            }
+        });
+
+        // Viewport Zoom helper
+        function zoomFit() {
+            canvas.style.maxWidth = '100%';
+            canvas.style.height = 'auto';
+            showToast('Viewport set to fit');
+        }
+
+        // Shortcuts Modal
+        function toggleShortcutsModal() {
+            shortcutsModal.classList.toggle('open');
+        }
+
+        function closeModalOnBackdrop(e) {
+            if (e.target === shortcutsModal) {
+                shortcutsModal.classList.remove('open');
+            }
+        }
+
+        // Toast Feedback
+        let toastTimeout = null;
+        function showToast(msg) {
+            clearTimeout(toastTimeout);
+            toast.textContent = msg;
+            toast.classList.add('show');
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2600);
+        }
+    </script>
+</body>
+</html>
