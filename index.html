@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RedactZero — Local Document Privacy & Blackout Tool</title>
+    <style>
+        :root {
+            --bg-primary: #090a0f;
+            --bg-secondary: #13151f;
+            --bg-tertiary: #1c2030;
+            --accent: #7c3aed;
+            --accent-hover: #6d28d9;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border: #2d3748;
+            --success: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            background: var(--accent);
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .badges {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .badge.active {
+            color: var(--success);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        .donate-btn {
+            background: var(--bg-tertiary);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 0.4rem 0.85rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .donate-btn:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        main {
+            flex: 1;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 900px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            height: fit-content;
+        }
+
+        .panel h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .dropzone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 3rem 2rem;
+            text-align: center;
+            background: var(--bg-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            min-height: 250px;
+        }
+
+        .dropzone:hover, .dropzone.dragover {
+            border-color: var(--accent);
+            background: var(--bg-tertiary);
+        }
+
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        .canvas-container {
+            position: relative;
+            display: inline-block;
+            max-width: 100%;
+            overflow: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: #000;
+            text-align: center;
+        }
+
+        canvas {
+            display: block;
+            cursor: crosshair;
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-area">
+            <div class="logo-icon">🔒</div>
+            <h1>RedactZero <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">Local Document Privacy</span></h1>
+        </div>
+        <div class="badges">
+            <div class="badge active">✓ 100% Client-Side</div>
+            <div class="badge active">✓ Zero Data Leaks</div>
+            <div class="badge active">✓ Offline Ready</div>
+        </div>
+        <a href="https://cash.app/$static9072" target="_blank" class="donate-btn">Donate: $static9072</a>
+    </header>
+
+    <main>
+        <!-- Settings Panel -->
+        <div class="panel">
+            <h2>1. Controls</h2>
+            
+            <div class="form-group">
+                <label>Instructions</label>
+                <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4;">
+                    Click and drag a box over any sensitive text, passwords, addresses, or account numbers on the image to permanently blackout the region.
+                </p>
+            </div>
+
+            <button id="clearMasksBtn" class="btn btn-secondary" style="width: 100%;" disabled>
+                Clear Redactions
+            </button>
+
+            <button id="downloadBtn" class="btn" style="width: 100%; margin-top: auto;" disabled>
+                Download Flattened Image
+            </button>
+        </div>
+
+        <!-- Workspace Panel -->
+        <div class="panel" style="flex: 1;">
+            <h2>2. Document Workspace</h2>
+            
+            <div id="dropzone" class="dropzone">
+                <div style="font-size: 2.5rem;">📄</div>
+                <div>
+                    <p style="font-size: 1rem; font-weight: 500; margin-bottom: 0.25rem;">Drop Document or Screenshot Here</p>
+                    <p style="font-size: 0.8rem; color: var(--text-muted);">Supports PNG, JPG, WebP snapshots</p>
+                </div>
+                <button class="btn btn-secondary" onclick="document.getElementById('docInput').click()">Select File</button>
+                <input type="file" id="docInput" accept="image/jpeg,image/png,image/webp" style="display: none;">
+            </div>
+
+            <div id="editorArea" style="display: none; flex-direction: column; gap: 1rem; align-items: center;">
+                <div style="width: 100%; display: flex; justify-content: space-between; align-items: center;">
+                    <span id="fileMeta" style="font-size: 0.85rem; color: var(--text-muted);">Ready for Redaction</span>
+                    <button class="btn btn-secondary" style="padding: 0.3rem 0.7rem; font-size: 0.75rem;" onclick="resetWorkspace()">Upload Different File</button>
+                </div>
+                <div class="canvas-container">
+                    <canvas id="redactCanvas"></canvas>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const dropzone = document.getElementById('dropzone');
+        const docInput = document.getElementById('docInput');
+        const editorArea = document.getElementById('editorArea');
+        const canvas = document.getElementById('redactCanvas');
+        const ctx = canvas.getContext('2d');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const clearMasksBtn = document.getElementById('clearMasksBtn');
+        const fileMeta = document.getElementById('fileMeta');
+
+        let originalImage = null;
+        let redactions = [];
+        let isDrawing = false;
+        let startX = 0;
+        let startY = 0;
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropzone.classList.add('dragover');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropzone.classList.remove('dragover');
+            }, false);
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files.length > 0) handleFile(files[0]);
+        });
+
+        docInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) handleFile(e.target.files[0]);
+        });
+
+        function handleFile(file) {
+            if (!file
